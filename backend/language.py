@@ -1,11 +1,11 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-# ── Router ───────────────────────────────────────────────────────────────────
+#Router
 router = APIRouter()
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
+#Schemas
 
 class DetectRequest(BaseModel):
     text: str
@@ -15,7 +15,7 @@ class DetectResponse(BaseModel):
     confidence: float
 
 
-# ── Core logic ────────────────────────────────────────────────────────────────
+#Core logic
 
 def detect_language(text: str) -> dict:
     """
@@ -31,8 +31,7 @@ def get_lang_code(text: str) -> str:
     return detect_language(text)["lang"]
 
 
-# ── Route ─────────────────────────────────────────────────────────────────────
-
+#Route
 @router.post("/detect-language", response_model=DetectResponse)
 async def detect_language_endpoint(body: DetectRequest):
     result = detect_language(body.text)

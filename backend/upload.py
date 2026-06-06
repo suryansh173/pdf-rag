@@ -5,24 +5,24 @@ from fastapi.responses import JSONResponse
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-# ── Router ───────────────────────────────────────────────────────────────────
+#Router
 router = APIRouter()
 
-# ── ChromaDB client ───────────────────────────────────────────────────────────
+#ChromaDB client
 CHROMA_PATH = "./chroma_store"
 chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
 
-# ── English-only embedding model (fast + lightweight) ─────────────────────────
+#English-only embedding model (fast + lightweight) 
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
 embedder = SentenceTransformer(EMBED_MODEL_NAME)
 
-# ── Config ────────────────────────────────────────────────────────────────────
+#Config
 CHUNK_SIZE    = 500
 CHUNK_OVERLAP = 50
 MAX_FILE_MB   = 20
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+#Helpers 
 
 def validate_pdf(file: UploadFile, content: bytes) -> None:
     if file.content_type != "application/pdf":
@@ -86,7 +86,7 @@ def embed_and_store(chunks: list[dict], doc_id: str, doc_name: str) -> None:
     )
 
 
-# ── Route ─────────────────────────────────────────────────────────────────────
+#Route
 
 @router.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):

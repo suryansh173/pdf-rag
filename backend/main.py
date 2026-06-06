@@ -5,14 +5,14 @@ from upload   import router as upload_router
 from ask      import router as ask_router
 from language import router as language_router
 
-# ── App ───────────────────────────────────────────────────────────────────────
+#App
 app = FastAPI(
     title       = "RAG API",
     description = "English PDF Q&A using RAG and Ollama",
     version     = "1.0.0",
 )
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
+#CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins     = ["http://localhost:5173", "http://localhost:3000"],
@@ -21,7 +21,7 @@ app.add_middleware(
     allow_headers     = ["*"],
 )
 
-# ── Routers ───────────────────────────────────────────────────────────────────
+#Routers
 app.include_router(upload_router)
 app.include_router(ask_router)
 app.include_router(language_router)

@@ -5,27 +5,27 @@ from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-# ── Router ───────────────────────────────────────────────────────────────────
+#Router 
 router = APIRouter()
 
-# ── Shared clients ────────────────────────────────────────────────────────────
+#Shared clients
 CHROMA_PATH      = "./chroma_store"
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"   # lightweight English-only model
 
 chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
 embedder      = SentenceTransformer(EMBED_MODEL_NAME)
 
-# ── Ollama config ─────────────────────────────────────────────────────────────
+#Ollama config
 OLLAMA_URL   = "http://localhost:11434/api/chat"
-OLLAMA_MODEL = "llama3.2"   # change to "mistral" or "gemma2" if preferred
+OLLAMA_MODEL = "llama3.2"   #can be changed to "mistral" or "gemma2" if preferred
 
-# ── Config ────────────────────────────────────────────────────────────────────
+#Config 
 TOP_K      = 4
 MIN_SCORE  = 0.30
 MAX_TOKENS = 1024
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
+#Schemas
 
 class AskRequest(BaseModel):
     query:  str
@@ -45,7 +45,7 @@ class AskResponse(BaseModel):
     doc_id:  str
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+#Helpers
 
 def retrieve_chunks(query: str, doc_id: str) -> list[dict]:
     """
@@ -151,7 +151,7 @@ def call_ollama(messages: list[dict]) -> str:
         raise HTTPException(status_code=500, detail=f"Ollama error: {str(e)}")
 
 
-# ── Route ─────────────────────────────────────────────────────────────────────
+#Route
 
 @router.post("/ask", response_model=AskResponse)
 async def ask(body: AskRequest):
