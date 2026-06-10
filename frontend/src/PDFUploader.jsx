@@ -214,7 +214,7 @@ export default function PDFUploader({ onUploadSuccess }) {
     form.append("file", file);
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://localhost:8000/upload");
+    xhr.open("POST", "https://careful-authority-old-letting.trycloudflare.com/upload");
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));

@@ -358,7 +358,7 @@ export default function ChatInterface({ docId = null, docName = "document.pdf" }
     setLoading(true);
 
     try {
-      const res  = await fetch("http://localhost:8000/ask", {
+      const res = await fetch("https://careful-authority-old-letting.trycloudflare.com/ask", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ query: q, doc_id: docId }),
