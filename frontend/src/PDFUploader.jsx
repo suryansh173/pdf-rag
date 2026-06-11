@@ -214,7 +214,7 @@ export default function PDFUploader({ onUploadSuccess }) {
     form.append("file", file);
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://44.215.49.95:8000/upload");
+   xhr.open("POST", "https://44-215-49-95.nip.io/upload");
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
