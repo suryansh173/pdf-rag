@@ -210,7 +210,7 @@ RAG (Retrieval-Augmented Generation) was introduced in the paper "Retrieval-Augm
 git clone -b local-version https://github.com/suryansh173/pdf-rag.git
 cd pdf-rag/backend
 python -m venv venv
-venv\Scripts\activate        # Windows
+venv\Scripts\activate        
 pip install -r requirements.txt
 ollama serve
 ollama pull llama3.2
