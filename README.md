@@ -2,7 +2,8 @@
 
 A full-stack application that allows users to upload PDF documents and ask questions about them using natural language. The system retrieves relevant chunks from the document and uses a large language model to generate accurate, context-aware answers.
 
-Live Demo: https://pdf-rag-navy.vercel.app
+Live Demo: https://pdf-rag-navy.vercel.app  
+API Docs: https://44-215-49-95.nip.io/docs
 
 ---
 
@@ -11,7 +12,7 @@ Live Demo: https://pdf-rag-navy.vercel.app
 1. User uploads a PDF document
 2. The backend extracts text, splits it into overlapping chunks, and embeds each chunk using a sentence transformer model
 3. Embeddings are stored in a ChromaDB vector database
-4. When the user asks a question, the query is embedded and the most relevant chunks are retrieved
+4. When the user asks a question, the query is embedded and the most relevant chunks are retrieved using cosine similarity
 5. Retrieved chunks are passed as context to a large language model which generates the final answer
 6. The answer is returned along with source citations showing which chunks and pages were used
 
@@ -19,7 +20,7 @@ Live Demo: https://pdf-rag-navy.vercel.app
 
 ## Architecture
 
-### Local version (main branch)
+### Local version (local-version branch)
 
 ```
 React Frontend (localhost:5173)
@@ -33,19 +34,19 @@ FastAPI Backend (localhost:8000)
    PDF files (local disk)
 ```
 
-### Cloud version (cloud-deploy branch)
+### Cloud version (cloud-deploy branch — default)
 
 ```
 React Frontend (Vercel)
         |
 FastAPI Backend (AWS EC2 t3.micro)
-        |-- Caddy reverse proxy (HTTPS)
-        |-- systemd service (auto-restart)
-        |-- Elastic IP (permanent)
+        |-- Caddy reverse proxy (HTTPS via Let's Encrypt)
+        |-- systemd service (auto-restart on crash/reboot)
+        |-- Elastic IP (permanent static IP)
         |
-   ChromaDB (persistent on EC2)
+   ChromaDB (persistent on EC2 disk)
         |
-   Groq API (LLaMA 3.1-8b-instant)
+   Groq API — LLaMA 3.1-8b-instant (cloud LLM)
         |
    AWS S3 (PDF object storage)
 ```
@@ -56,31 +57,42 @@ FastAPI Backend (AWS EC2 t3.micro)
 
 ### Backend
 - Python 3.12
-- FastAPI — REST API framework
-- PyMuPDF — PDF text extraction
-- Sentence Transformers (all-MiniLM-L6-v2) — text embeddings
-- ChromaDB — vector database for similarity search
-- Groq API (cloud) / Ollama (local) — LLM inference
-- boto3 — AWS S3 SDK
-- Uvicorn — ASGI server
+- FastAPI (https://fastapi.tiangolo.com) — REST API framework with automatic OpenAPI docs
+- PyMuPDF (https://pymupdf.readthedocs.io) — PDF text extraction page by page
+- Sentence Transformers (https://www.sbert.net) — all-MiniLM-L6-v2 model for text embeddings
+- ChromaDB (https://www.trychroma.com) — open source vector database for similarity search
+- Groq API (https://console.groq.com) — cloud LLM inference using LLaMA 3.1-8b-instant
+- Ollama (https://ollama.com) — local LLM runtime used in local-version branch
+- boto3 (https://boto3.amazonaws.com/v1/documentation/api/latest/index.html) — AWS SDK for Python
+- Uvicorn (https://www.uvicorn.org) — ASGI server for running FastAPI
+- Pydantic (https://docs.pydantic.dev) — data validation and schema definition
 
 ### Frontend
-- React 18
-- Vite — build tool
-- Vanilla CSS — no UI library
+- React 18 (https://react.dev) — UI library
+- Vite (https://vitejs.dev) — frontend build tool and dev server
+- Vanilla CSS — no external UI library used
 
 ### Cloud Infrastructure (AWS)
-- EC2 t3.micro — backend server
-- S3 — PDF file storage
-- IAM — roles and permissions
-- Elastic IP — permanent static IP address
-- Security Groups — network access control
-- Caddy — reverse proxy with automatic HTTPS via Let's Encrypt
-- systemd — service management and auto-restart
+- EC2 t3.micro — backend server (Ubuntu 24.04 LTS)
+- S3 — PDF file object storage
+- IAM — roles and permission policies
+- Elastic IP — permanent static public IP address
+- Security Groups — inbound/outbound network access control
 
-### Deployment
-- Vercel — frontend hosting
-- nip.io — free DNS for HTTPS without a custom domain
+### Other Services
+- Caddy (https://caddyserver.com) — reverse proxy with automatic HTTPS via Let's Encrypt
+- nip.io (https://nip.io) — free wildcard DNS for IP-based HTTPS
+- Vercel (https://vercel.com) — frontend hosting with automatic deployments from GitHub
+- Groq (https://groq.com) — free LLM API used as cloud replacement for local Ollama
+
+---
+
+## Branches
+
+| Branch | Description | Status |
+|--------|-------------|--------|
+| cloud-deploy (default) | AWS deployment with EC2, S3, Groq API, HTTPS | Live at pdf-rag-navy.vercel.app |
+| local-version | Local setup using Ollama and local ChromaDB | Run on your machine |
 
 ---
 
@@ -89,29 +101,20 @@ FastAPI Backend (AWS EC2 t3.micro)
 ```
 pdf-rag/
 ├── backend/
-│   ├── main.py           # FastAPI app, CORS, router registration
+│   ├── main.py           # FastAPI app, CORS middleware, router registration
 │   ├── upload.py         # PDF upload, text extraction, chunking, embedding, S3 storage
-│   ├── ask.py            # Query embedding, ChromaDB retrieval, LLM call, response
+│   ├── ask.py            # Query embedding, ChromaDB retrieval, Groq LLM call, response
 │   ├── language.py       # Language detection utility
 │   └── requirements.txt  # Python dependencies
 ├── frontend/
 │   └── src/
-│       ├── App.jsx           # Root component, upload/chat state
-│       ├── PDFUploader.jsx   # Drag and drop PDF upload with progress bar
-│       ├── ChatInterface.jsx # Chat UI with message history and source citations
-│       └── CitationsPanel.jsx # Source chunk display panel
+│       ├── App.jsx            # Root component, manages upload and chat state
+│       ├── PDFUploader.jsx    # Drag and drop PDF upload UI with progress bar
+│       ├── ChatInterface.jsx  # Chat UI with message history and source citations
+│       └── CitationsPanel.jsx # Source chunk display with relevance scores
 ├── .gitignore
 └── README.md
 ```
-
----
-
-## Branches
-
-| Branch | Description | Status |
-|--------|-------------|--------|
-| main | Local setup using Ollama and local ChromaDB | Run locally |
-| cloud-deploy | AWS deployment with EC2, S3, Groq API, HTTPS | Live |
 
 ---
 
@@ -123,7 +126,7 @@ pdf-rag/
 | POST | /ask | Submit question, retrieve relevant chunks, get LLM answer |
 | POST | /detect-language | Detect language of input text |
 | GET | /health | Health check |
-| GET | /docs | Interactive API documentation (Swagger UI) |
+| GET | /docs | Interactive Swagger UI |
 
 ### Upload request
 ```
@@ -172,40 +175,45 @@ Body: file (PDF, max 20MB)
 
 ## How RAG works in this project
 
-### 1. Document ingestion (upload)
+RAG (Retrieval-Augmented Generation) was introduced in the paper "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" (Lewis et al., 2020, https://arxiv.org/abs/2005.11401). The core idea is to retrieve relevant documents before generating an answer, so the LLM is grounded in real source material rather than relying solely on its training data.
+
+### 1. Document ingestion
+
 - PDF is parsed page by page using PyMuPDF
 - Each page is split into chunks of 500 characters with 50 character overlap
-- Overlap ensures context is not lost at chunk boundaries
-- Each chunk is embedded using all-MiniLM-L6-v2 (384-dimensional vectors)
-- Embeddings and metadata (page number, doc_id) are stored in ChromaDB using cosine similarity space
-- Original PDF is uploaded to S3 for persistent storage
+- Overlap ensures context is not lost at chunk boundaries — a technique described in LangChain's chunking documentation (https://python.langchain.com/docs/concepts/text_splitters)
+- Each chunk is embedded using all-MiniLM-L6-v2, a lightweight sentence transformer model from the SBERT project (https://www.sbert.net/docs/sentence_transformer/pretrained_models.html) that produces 384-dimensional vectors
+- Embeddings are stored in ChromaDB using cosine similarity space
+- Original PDF is uploaded to AWS S3 for persistent storage
 
-### 2. Query processing (ask)
-- User query is embedded using the same all-MiniLM-L6-v2 model
-- Top 4 most similar chunks are retrieved from ChromaDB using cosine similarity
-- Chunks below a minimum score of 0.30 are filtered out
+### 2. Query processing
+
+- User query is embedded using the same all-MiniLM-L6-v2 model to ensure vectors are in the same space
+- Top 4 most similar chunks are retrieved from ChromaDB using approximate nearest neighbour search via the HNSW algorithm (https://www.pinecone.io/learn/series/faiss/hnsw)
+- Chunks below a minimum relevance score of 0.30 are filtered out to avoid irrelevant context
 - Retrieved chunks are formatted into a context block with page references
-- A system prompt instructs the LLM to answer only from the provided context
-- Groq API (LLaMA 3.1-8b-instant) generates the final answer
-- Answer is returned with source citations for transparency
+- A system prompt instructs the LLM to answer only from the provided context — a standard RAG prompting technique
+- Groq API calls LLaMA 3.1-8b-instant (Meta, https://ai.meta.com/blog/meta-llama-3) to generate the final answer
+- Answer is returned with source citations for transparency and verification
 
 ---
 
-## Running locally (main branch)
+## Running locally (local-version branch)
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- Ollama installed and running
-- LLaMA 3.2 model pulled
+- Python 3.10 or higher
+- Node.js 18 or higher
+- Ollama installed (https://ollama.com/download)
 
 ### Backend setup
 ```bash
-git clone https://github.com/suryansh173/pdf-rag.git
+git clone -b local-version https://github.com/suryansh173/pdf-rag.git
 cd pdf-rag/backend
 python -m venv venv
 venv\Scripts\activate        # Windows
 pip install -r requirements.txt
+ollama serve
+ollama pull llama3.2
 uvicorn main:app --reload
 ```
 
@@ -216,12 +224,6 @@ npm install
 npm run dev
 ```
 
-### Start Ollama
-```bash
-ollama serve
-ollama pull llama3.2
-```
-
 Open http://localhost:5173 in your browser.
 
 ---
@@ -230,7 +232,7 @@ Open http://localhost:5173 in your browser.
 
 ### Prerequisites
 - AWS account with EC2, S3, IAM configured
-- Groq API key (free at console.groq.com)
+- Groq API key — free at https://console.groq.com
 
 ### Backend setup on EC2
 ```bash
@@ -244,45 +246,75 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend deployment
-Update API URLs in PDFUploader.jsx and ChatInterface.jsx to point to your EC2 address, then deploy to Vercel by connecting your GitHub repository.
+Update API URLs in PDFUploader.jsx and ChatInterface.jsx to your EC2 address, then connect your GitHub repository to Vercel and deploy.
 
 ---
 
-## Cloud infrastructure setup summary
+## Cloud infrastructure setup
 
-- EC2 t3.micro instance on Ubuntu 24.04 LTS
-- Elastic IP allocated and associated with instance
+- EC2 t3.micro instance on Ubuntu 24.04 LTS in us-east-1 region
+- Elastic IP allocated and associated for permanent public IP
 - IAM role with AmazonS3FullAccess and AmazonSSMManagedInstanceCore attached to EC2
-- S3 bucket created in us-east-1 region
+- S3 bucket created in us-east-1 with public access configured for uploads
 - Security group inbound rules: SSH (22), HTTP (80), HTTPS (443), FastAPI (8000)
-- systemd service configured for auto-start and auto-restart of FastAPI
-- Caddy installed as reverse proxy with automatic SSL certificate from Let's Encrypt via nip.io domain
-- Swap memory (2GB) added to handle sentence-transformers memory requirements on t3.micro
+- systemd service configured for auto-start on boot and auto-restart on crash
+- 2GB swap memory added to handle sentence-transformers memory requirements on t3.micro
+- Caddy configured as reverse proxy with automatic SSL certificate from Let's Encrypt
+- nip.io used for free DNS resolution mapping EC2 IP to a domain for HTTPS
 
 ---
 
 ## Known limitations
 
 - ChromaDB data is stored on EC2 disk — if instance is terminated, vector data is lost
-- nip.io domain is a free service with no SLA guarantee
-- t3.micro has 1GB RAM — large PDFs may be slow to process
-- Uploaded PDFs are session-based — no user accounts or document history
+- No user authentication — anyone with the link can upload and query documents
+- nip.io is a free community service with no uptime guarantee
+- t3.micro has 1GB RAM — large PDFs may be slow to process due to embedding generation
+- No document history — each session is independent
 
 ---
 
 ## Future improvements
 
-- Add user authentication
-- Migrate ChromaDB to a managed vector database
-- Add support for multiple documents per session
-- Set up CI/CD pipeline with GitHub Actions and AWS CodeDeploy
-- Add CloudWatch monitoring and alerts
-- Support multilingual documents
+- Add user authentication with JWT tokens
+- Migrate ChromaDB to a managed vector database such as Pinecone or Weaviate
+- Add support for querying multiple documents simultaneously
+- Set up CI/CD pipeline with GitHub Actions
+- Add CloudWatch monitoring and alerting
+- Replace nip.io with a custom domain and dedicated SSL certificate
+- Add Docker and docker-compose for easier local setup
 
 ---
 
-## Author
+## References
 
-Suryansh Pratap Singh  
-suryanshpratapsingh528@gmail.com  
-https://github.com/suryansh173
+- Lewis, P. et al. (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. https://arxiv.org/abs/2005.11401
+- Reimers, N. and Gurevych, I. (2019). Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks. https://arxiv.org/abs/1908.10084
+- Meta AI. (2024). Introducing Meta Llama 3. https://ai.meta.com/blog/meta-llama-3
+- ChromaDB Documentation. https://docs.trychroma.com
+- FastAPI Documentation. https://fastapi.tiangolo.com
+- Malkov, Y. and Yashunin, D. (2018). Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. https://arxiv.org/abs/1603.09320
+
+---
+
+## Acknowledgements
+
+This project was built as part of a self-directed learning journey to understand 
+production ML systems and cloud deployment from scratch as a recent graduate.
+
+Special thanks to the following open source projects and communities that made 
+this possible:
+
+- The Sentence Transformers team (Nils Reimers, Iryna Gurevych) for the 
+  all-MiniLM-L6-v2 model used for semantic embeddings
+- The ChromaDB team for building an accessible open source vector database
+- The FastAPI team (Sebastian Ramirez) for the excellent Python API framework
+- The Groq team for providing free and fast LLM inference API
+- The Caddy project for automatic HTTPS that simplified production deployment
+- Claude (Anthropic) for architecture guidance, debugging assistance, and 
+  deployment troubleshooting
+
+This project intentionally avoids high-level RAG frameworks like LangChain to 
+build the retrieval pipeline from first principles — including manual chunking, 
+embedding, similarity search, and prompt construction — to develop a deeper 
+understanding of how RAG systems work internally.
