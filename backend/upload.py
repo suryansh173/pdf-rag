@@ -1,29 +1,33 @@
 import uuid
-import fitz  # PyMuPDF
+import fitz
+import boto3
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-#Router
+# Router
 router = APIRouter()
 
-#ChromaDB client
+# ChromaDB client
 CHROMA_PATH = "./chroma_store"
 chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
 
-#English-only embedding model (fast + lightweight) 
+# Embedding model
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
 embedder = SentenceTransformer(EMBED_MODEL_NAME)
 
-#Config
+# S3 config
+S3_BUCKET = "pdf-rag-uploads-suryansh"
+s3_client = boto3.client("s3", region_name="us-east-1")
+
+# Config
 CHUNK_SIZE    = 500
 CHUNK_OVERLAP = 50
 MAX_FILE_MB   = 20
 
 
-#Helpers 
-
+# Helpers
 def validate_pdf(file: UploadFile, content: bytes) -> None:
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
@@ -32,8 +36,18 @@ def validate_pdf(file: UploadFile, content: bytes) -> None:
         raise HTTPException(status_code=400, detail=f"File exceeds {MAX_FILE_MB} MB limit.")
 
 
+def upload_to_s3(content: bytes, doc_id: str, filename: str) -> str:
+    key = f"uploads/{doc_id}/{filename}"
+    s3_client.put_object(
+        Bucket=S3_BUCKET,
+        Key=key,
+        Body=content,
+        ContentType="application/pdf"
+    )
+    return key
+
+
 def extract_text_from_pdf(content: bytes) -> list[dict]:
-    """Extract text page by page using PyMuPDF."""
     pages = []
     try:
         doc = fitz.open(stream=content, filetype="pdf")
@@ -54,7 +68,6 @@ def extract_text_from_pdf(content: bytes) -> list[dict]:
 
 
 def chunk_pages(pages: list[dict]) -> list[dict]:
-    """Split pages into overlapping chunks of CHUNK_SIZE characters."""
     chunks = []
     for page in pages:
         text  = page["text"]
@@ -68,7 +81,6 @@ def chunk_pages(pages: list[dict]) -> list[dict]:
 
 
 def embed_and_store(chunks: list[dict], doc_id: str, doc_name: str) -> None:
-    """Embed chunks and store in ChromaDB collection keyed by doc_id."""
     collection = chroma_client.get_or_create_collection(
         name     = doc_id,
         metadata = {"doc_name": doc_name, "hnsw:space": "cosine"},
@@ -86,20 +98,19 @@ def embed_and_store(chunks: list[dict], doc_id: str, doc_name: str) -> None:
     )
 
 
-#Route
-
+# Route
 @router.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
-    """
-    Upload a PDF, extract text, chunk it, embed with all-MiniLM-L6-v2,
-    and store in ChromaDB. Returns doc_id for subsequent /ask calls.
-    """
     content  = await file.read()
     validate_pdf(file, content)
 
     doc_id   = str(uuid.uuid4())
     doc_name = file.filename or "document.pdf"
 
+    # save to S3
+    s3_key = upload_to_s3(content, doc_id, doc_name)
+
+    # extract and chunk
     pages  = extract_text_from_pdf(content)
     chunks = chunk_pages(pages)
 
@@ -114,5 +125,6 @@ async def upload_pdf(file: UploadFile = File(...)):
         "pages":   len(pages),
         "chunks":  len(chunks),
         "model":   EMBED_MODEL_NAME,
+        "s3_key":  s3_key,
         "status":  "indexed",
     })
