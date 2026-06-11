@@ -358,7 +358,7 @@ export default function ChatInterface({ docId = null, docName = "document.pdf" }
     setLoading(true);
 
     try {
-      const res = await fetch("http://44.215.49.95/ask", {
+      const res = await fetch("http://44.215.49.95:8000/ask", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ query: q, doc_id: docId }),
