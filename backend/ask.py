@@ -17,7 +17,7 @@ chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
 embedder      = SentenceTransformer(EMBED_MODEL_NAME)
 
 # Groq config
-GROQ_MODEL  = "llama-3.1-8b-instant"   # free, fast
+GROQ_MODEL  = "openai/gpt-oss-20b"   # free, fast
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 # Config
